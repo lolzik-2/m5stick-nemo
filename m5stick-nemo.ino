@@ -173,9 +173,9 @@ uint16_t FGCOLOR=0xFFF1;
 #endif
 
 // Proc codes (новые 34, 35):
-// ... (стандартные коды 0..33, 97 сохранены)
-// 34 - SD Card File Browser (CARDPUTER only)   [NEW]
-// 35 - IR Jammer                                [NEW]
+// 34 - SD Card File Browser (CARDPUTER only)
+// 35 - IR Jammer
+// 97 - Mount/UnMount SD Card
 
 const String contributors[] PROGMEM = {
   "@bicurico","@bmorcelli","@chr0m1ng","@doflamingozk","@9Ri7",
@@ -660,12 +660,24 @@ void battery_drawmenu(int battery, float voltage_b = 0, float voltage_c = 0) {
 #if defined(CARDPUTER)
   uint8_t oldBattery = 0;
   void battery_setup() {
-    rstOverride = false; int battery = M5.Power.getBatteryLevel(); battery_drawmenu(battery); delay(500);
+    rstOverride = false;
+    int battery = M5.Power.getBatteryLevel();
+    // [FIX] Защита от отрицательных значений при старте
+    if (battery < 0) battery = 0;
+    if (battery > 100) battery = 100;
+    battery_drawmenu(battery);
+    delay(500);
   }
   void battery_loop() {
-    uint32_t batteryValues = 0;
+    int32_t batteryValues = 0; // [FIX] int32_t вместо uint32_t
     for(uint8_t i = 0; i < 30; i++) {
-      delay(100); batteryValues += M5.Power.getBatteryLevel();
+      delay(100);
+      int val = M5.Power.getBatteryLevel();
+      // [FIX] Отсекаем ошибочные значения
+      if (val < 0) val = 0;
+      if (val > 100) val = 100;
+      batteryValues += val;
+      
       M5Cardputer.update();
       if(M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
         rstOverride = false; isSwitching = true; current_proc = 1; break;
@@ -1258,7 +1270,7 @@ Serial.begin(115200);
 void menu_controller_loop() { menuController.loop(); }
 
 // ============================================================
-// [NEW] SD FILE BROWSER (Cardputer only)
+// SD FILE BROWSER (Cardputer only)
 // ============================================================
 #if defined(CARDPUTER)
   #define MAX_SD_FILES 100
@@ -1320,8 +1332,7 @@ void menu_controller_loop() { menuController.loop(); }
 #endif
 
 // ============================================================
-// [NEW v2] IR JAMMER — 5 режимов, портировано из Bruce
-// ENTER/ /  — сменить режим.  TAB/.  — выход.
+// IR JAMMER (портировано из Bruce)
 // ============================================================
 #define IRJAM_NUM_FREQS 7
 static const uint16_t IRJAM_FREQS[IRJAM_NUM_FREQS] = {30000, 33000, 36000, 38000, 40000, 42000, 56000};
@@ -1349,7 +1360,6 @@ static void irjam_sendPat(const uint16_t* pat, uint16_t len) {
     IrSender.sendRaw((uint16_t*)pat, len, irjam_freq());
 }
 
-// BASIC: фиксированный тайминг, длинная пачка
 static void irjam_doBasic() {
     uint16_t pat[40];
     for (int i = 0; i < 40; i += 2) {
@@ -1359,7 +1369,6 @@ static void irjam_doBasic() {
     for (int r = 0; r < irjam.jamDensity; r++) irjam_sendPat(pat, 40);
 }
 
-// ENHANCED: раздельные mark / space
 static void irjam_doEnhanced() {
     uint16_t pat[40];
     for (int i = 0; i < 40; i += 2) {
@@ -1369,7 +1378,6 @@ static void irjam_doEnhanced() {
     for (int r = 0; r < irjam.jamDensity; r++) irjam_sendPat(pat, 40);
 }
 
-// SWEEP: плавно меняем 8..70 us — перекрывает NEC/RC5/Sony/Samsung/LG
 static void irjam_doSweep() {
     irjam.markTiming += irjam.sweepDirection * irjam.sweepSpeed;
     if (irjam.markTiming > irjam.maxTiming || irjam.markTiming < irjam.minTiming) {
@@ -1385,7 +1393,6 @@ static void irjam_doSweep() {
     irjam_sendPat(pat, 60);
 }
 
-// RANDOM: случайные импульсы + случайная частота
 static void irjam_doRandom() {
     uint16_t pat[60];
     for (int i = 0; i < 60; i++) pat[i] = random(5, 1000);
@@ -1393,7 +1400,6 @@ static void irjam_doRandom() {
     irjam_sendPat(pat, 60);
 }
 
-// EMPTY: короткие «пустые» пакеты + прыжки по частоте
 static void irjam_doEmpty() {
     uint16_t pat[4] = {1, 1, 1, 1};
     for (int i = 0; i < irjam.jamDensity; i++) irjam_sendPat(pat, 4);
@@ -1401,14 +1407,19 @@ static void irjam_doEmpty() {
 }
 
 void irjam_draw() {
-    DISP.fillScreen(BGCOLOR); DISP.setTextSize(SMALL_TEXT);
-    DISP.setCursor(0, 0); DISP.setTextColor(BGCOLOR, FGCOLOR);
-    DISP.println(" IR Jammer ");
+    DISP.fillScreen(BGCOLOR);
+    DISP.setTextSize(SMALL_TEXT);
+    DISP.setCursor(0, 0);
+    
+    DISP.setTextColor(BGCOLOR, FGCOLOR);
+    DISP.println(" IR Jammer ");      // Шапка
     DISP.setTextColor(FGCOLOR, BGCOLOR);
-    DISP.printf("Mode: %s\n", IRJAM_MODE_NAMES[irjam.mode]);
+    
+    DISP.printf("Mode: %s   \n", IRJAM_MODE_NAMES[irjam.mode]);
     DISP.printf("Freq: %u kHz\n", irjam_freq() / 1000);
-    DISP.printf("Jams: %lu\n", (unsigned long)irjam.jamCount);
-    DISP.printf("Tmg : %u us\n", irjam.markTiming);
+    DISP.printf("Jams: %lu   \n", (unsigned long)irjam.jamCount);
+    DISP.printf("Tmg : %u us \n", irjam.markTiming);
+    DISP.println("");
     DISP.println("ENT:Mode  TAB:Exit");
 }
 
@@ -1435,7 +1446,6 @@ void irjam_setup() {
 }
 
 void irjam_loop() {
-    // Выход по next
     if (check_next_press()) {
         digitalWrite(IRLED, M5LED_OFF);
         rstOverride = false;
@@ -1444,7 +1454,6 @@ void irjam_loop() {
         delay(250);
         return;
     }
-    // Переключение режима по select
     if (check_select_press()) {
         irjam.mode = (irjam.mode + 1) % 5;
         irjam.jamCount = 0;
@@ -1453,8 +1462,6 @@ void irjam_loop() {
     }
 
     uint32_t now = millis();
-
-    // Обновление экрана раз в секунду или по запросу
     static uint32_t lastDisp = 0;
     if (irjam.redraw || now - lastDisp > 1000) {
         irjam.redraw = false;
@@ -1462,7 +1469,6 @@ void irjam_loop() {
         irjam_draw();
     }
 
-    // Отправка пачки каждые 15 мс
     if (now - irjam.lastUpdate > 15) {
         irjam.lastUpdate = now;
         switch (irjam.mode) {
