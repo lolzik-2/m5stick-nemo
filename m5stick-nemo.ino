@@ -659,24 +659,30 @@ void battery_drawmenu(int battery, float voltage_b = 0, float voltage_c = 0) {
 
 #if defined(CARDPUTER)
   uint8_t oldBattery = 0;
+
+  // Честный расчет заряда по вольтажу (3300mV = 0%, 4200mV = 100%)
+  int get_cardputer_battery_pct() {
+    int mv = M5.Power.getBatteryVoltage(); 
+    if (mv < 3300) mv = 3300;
+    if (mv > 4200) mv = 4200;
+    int pct = (mv - 3300) * 100 / (4200 - 3300);
+    if (pct < 0) pct = 0;
+    if (pct > 100) pct = 100;
+    return pct;
+  }
+
   void battery_setup() {
     rstOverride = false;
-    int battery = M5.Power.getBatteryLevel();
-    // [FIX] Защита от отрицательных значений при старте
-    if (battery < 0) battery = 0;
-    if (battery > 100) battery = 100;
+    int battery = get_cardputer_battery_pct();
     battery_drawmenu(battery);
     delay(500);
   }
+  
   void battery_loop() {
-    int32_t batteryValues = 0; // [FIX] int32_t вместо uint32_t
+    int32_t batteryValues = 0;
     for(uint8_t i = 0; i < 30; i++) {
       delay(100);
-      int val = M5.Power.getBatteryLevel();
-      // [FIX] Отсекаем ошибочные значения
-      if (val < 0) val = 0;
-      if (val > 100) val = 100;
-      batteryValues += val;
+      batteryValues += get_cardputer_battery_pct();
       
       M5Cardputer.update();
       if(M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
