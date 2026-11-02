@@ -9,16 +9,14 @@
 // #define CARDPUTER
 // -=-=- Uncommenting more than one at a time will result in errors -=-=-
 
-// -=-=- NEMO Language for Menu and Portal -=- Thanks, @marivaaldo and @Mmatuda! -=-=-
-// #define LANGUAGE_EN_US  // US/Canada (FCC) — ch 1-11; default if nothing is defined
-// #define LANGUAGE_EN_GB  // UK/EU — ch 1-13 (Ofcom/WTA 2006)
-// #define LANGUAGE_PT_BR  // Brazil — ch 1-13 (Anatel)
-// #define LANGUAGE_IT_IT  // Italy/EU — ch 1-13 (ETSI)
-// #define LANGUAGE_FR_FR  // France/EU — ch 1-13 (ETSI)
+// #define LANGUAGE_EN_US
+// #define LANGUAGE_EN_GB
+// #define LANGUAGE_PT_BR
+// #define LANGUAGE_IT_IT
+// #define LANGUAGE_FR_FR
 
-// -- DEPRECATED - THESE ARE NOW EEPROM DEFINED -- //
-uint16_t BGCOLOR=0x0001; // placeholder
-uint16_t FGCOLOR=0xFFF1; // placeholder
+uint16_t BGCOLOR=0x0001;
+uint16_t FGCOLOR=0xFFF1;
 
 #ifndef NEMO_VERSION
   #define NEMO_VERSION "dev"
@@ -31,8 +29,6 @@ uint16_t FGCOLOR=0xFFF1; // placeholder
 #if !defined(LANGUAGE_EN_US) && !defined(LANGUAGE_EN_GB) && !defined(LANGUAGE_PT_BR) && !defined(LANGUAGE_IT_IT) && !defined(LANGUAGE_FR_FR)
   #define LANGUAGE_EN_US
 #endif
-
-
 
 #if defined(STICK_C_PLUS)
   #include <M5Unified.h>
@@ -176,41 +172,10 @@ uint16_t FGCOLOR=0xFFF1; // placeholder
   #define M5LED_OFF HIGH
 #endif
 
-// Proc codes (добавлены 34, 35):
-// 0  - Clock
-// 1  - Main Menu
-// 2  - Settings Menu
-// 3  - Clock set
-// 4  - Dimmer Time adjustment
-// 5  - TV B-GONE
-// 6  - Battery info
-// 7  - screen rotation
-// 8  - AppleJuice Menu
-// 9  - AppleJuice Advertisement
-// 10 - Credits
-// 11 - Wifi beacon spam
-// 12 - Wifi tools menu
-// 13 - TV-B-Gone Region Setting
-// 14 - Wifi scanning
-// 15 - Wifi scan results
-// 16 - Bluetooth Spam Menu
-// 17 - Bluetooth Maelstrom
-// 18 - QR Codes
-// 19 - NEMO Portal (with Clone support)
-// 22 - Custom Color Settings
-// 23 - Pre-defined color themes
-// 24 - Deauth Hunter
-// 25 - BLE Hunter
-// 26 - PineAP Hunter
-// 27 - BadUSB Hunter (CARDPUTER only)
-// 29 - BLE Hunter RSSI Setting
-// 30 - Deauth Hunter RSSI Setting
-// 31 - BLE Hunter Alert Packets Setting
-// 32 - Deauth Hunter Alert Packets Setting
-// 33 - PineAP Hunter Alert SSIDs Setting
+// Proc codes (новые 34, 35):
+// ... (стандартные коды 0..33, 97 сохранены)
 // 34 - SD Card File Browser (CARDPUTER only)   [NEW]
 // 35 - IR Jammer                                [NEW]
-// 97 - Mount/UnMount SD Card on M5Stick devices, if SDCARD is declared
 
 const String contributors[] PROGMEM = {
   "@bicurico","@bmorcelli","@chr0m1ng","@doflamingozk","@9Ri7",
@@ -273,15 +238,8 @@ int dh_pkts = 0;
 #include "badusb_hunter.h"
 #endif
 
-struct MENU {
-  char name[19];
-  int command;
-};
-
-struct QRCODE {
-  char name[19];
-  String url;
-};
+struct MENU { char name[19]; int command; };
+struct QRCODE { char name[19]; String url; };
 
 QRCODE qrcodes[] = {
   { TXT_BACK, "" },
@@ -291,9 +249,7 @@ QRCODE qrcodes[] = {
 };
 
 void drawmenu(MENU thismenu[], int size) {
-  DISP.setTextSize(SMALL_TEXT);
-  DISP.fillScreen(BGCOLOR);
-  DISP.setCursor(0, 0, 1);
+  DISP.setTextSize(SMALL_TEXT); DISP.fillScreen(BGCOLOR); DISP.setCursor(0, 0, 1);
   if (cursor >= size) cursor = 0;
   if (cursor < 0) cursor = size - 1;
   if (cursor > 5) {
@@ -312,30 +268,23 @@ void drawmenu(MENU thismenu[], int size) {
 }
 
 void number_drawmenu(int nums) {
-  DISP.setTextSize(SMALL_TEXT);
-  DISP.fillScreen(BGCOLOR);
-  DISP.setCursor(0, 0);
+  DISP.setTextSize(SMALL_TEXT); DISP.fillScreen(BGCOLOR); DISP.setCursor(0, 0);
   if (cursor > 5) {
     for (int i = 0 + (cursor - 5); i < nums; i++) {
       if(cursor == i) DISP.setTextColor(BGCOLOR, FGCOLOR);
-      DISP.printf(" %-19d\n", i);
-      DISP.setTextColor(FGCOLOR, BGCOLOR);
+      DISP.printf(" %-19d\n", i); DISP.setTextColor(FGCOLOR, BGCOLOR);
     }
   } else {
     for (int i = 0; i < nums; i++) {
       if(cursor == i) DISP.setTextColor(BGCOLOR, FGCOLOR);
-      DISP.printf(" %-19d\n", i);
-      DISP.setTextColor(FGCOLOR, BGCOLOR);
+      DISP.printf(" %-19d\n", i); DISP.setTextColor(FGCOLOR, BGCOLOR);
     }
   }
 }
 
 void switcher_button_proc() {
   if (rstOverride == false && !isSwitching) {
-    if (check_next_press()) {
-      isSwitching = true;
-      current_proc = 1;
-    }
+    if (check_next_press()) { isSwitching = true; current_proc = 1; }
   }
 }
 
@@ -352,14 +301,8 @@ void check_menu_press() {
 #endif
 #if defined(AXP) || defined(KB) || (defined(M5_BUTTON_MENU) && !defined(STICKS3))
     dimtimer();
-    if(portal_active){
-      shutdownWebServer();
-      portal_active = false;
-    }
-    isSwitching = true;
-    rstOverride = false;
-    current_proc = 1;
-    delay(100);
+    if(portal_active){ shutdownWebServer(); portal_active = false; }
+    isSwitching = true; rstOverride = false; current_proc = 1; delay(100);
   }
 #endif
 }
@@ -367,25 +310,12 @@ void check_menu_press() {
 bool check_next_press(){
 #if defined(KB)
   M5Cardputer.update();
-  if (M5Cardputer.Keyboard.isKeyPressed(';')){
-    cursor = cursor - 2;
-    dimtimer();
-    return true;
-  }
-  if (M5Cardputer.Keyboard.isKeyPressed(KEY_TAB) || M5Cardputer.Keyboard.isKeyPressed('.')){
-    dimtimer();
-    return true;
-  }
+  if (M5Cardputer.Keyboard.isKeyPressed(';')){ cursor = cursor - 2; dimtimer(); return true; }
+  if (M5Cardputer.Keyboard.isKeyPressed(KEY_TAB) || M5Cardputer.Keyboard.isKeyPressed('.')){ dimtimer(); return true; }
 #elif defined(STICKS3)
-  if (digitalRead(12) == LOW){
-    dimtimer();
-    return true;
-  }
+  if (digitalRead(12) == LOW){ dimtimer(); return true; }
 #else
-  if (digitalRead(M5_BUTTON_RST) == LOW){
-    dimtimer();
-    return true;
-  }
+  if (digitalRead(M5_BUTTON_RST) == LOW){ dimtimer(); return true; }
 #endif
   return false;
 }
@@ -393,80 +323,40 @@ bool check_next_press(){
 bool check_select_press(){
 #if defined(KB)
   M5Cardputer.update();
-  if (M5Cardputer.Keyboard.isKeyPressed(KEY_ENTER) || M5Cardputer.Keyboard.isKeyPressed('/')){
-    dimtimer();
-    return true;
-  }
+  if (M5Cardputer.Keyboard.isKeyPressed(KEY_ENTER) || M5Cardputer.Keyboard.isKeyPressed('/')){ dimtimer(); return true; }
 #else
-  if (digitalRead(M5_BUTTON_HOME) == LOW){
-    dimtimer();
-    return true;
-  }
+  if (digitalRead(M5_BUTTON_HOME) == LOW){ dimtimer(); return true; }
 #endif
   return false;
 }
 
 class MenuController {
 private:
-  MENU* currentMenu;
-  int menuSize;
-  void (*onExit)();
-  void (*onSelect)();
+  MENU* currentMenu; int menuSize;
+  void (*onExit)(); void (*onSelect)();
 public:
   void setup(MENU* menu, int size, void (*exitCallback)() = nullptr, void (*selectCallback)() = nullptr) {
-    currentMenu = menu;
-    menuSize = size;
-    onExit = exitCallback;
-    onSelect = selectCallback;
-    cursor = 0;
-    rstOverride = true;
-    drawmenu(currentMenu, menuSize);
-    delay(500);
+    currentMenu = menu; menuSize = size; onExit = exitCallback; onSelect = selectCallback;
+    cursor = 0; rstOverride = true; drawmenu(currentMenu, menuSize); delay(500);
   }
   void setupWithIntro(MENU* menu, int size, String introText, int introDelay = 1000) {
-    DISP.fillScreen(BGCOLOR);
-    DISP.setCursor(0, 0);
-    DISP.println(introText);
-    delay(introDelay);
-    setup(menu, size);
+    DISP.fillScreen(BGCOLOR); DISP.setCursor(0, 0); DISP.println(introText); delay(introDelay); setup(menu, size);
   }
   void loop() {
-    if (check_next_press()) {
-      cursor++;
-      cursor = cursor % menuSize;
-      drawmenu(currentMenu, menuSize);
-      delay(250);
-    }
+    if (check_next_press()) { cursor++; cursor = cursor % menuSize; drawmenu(currentMenu, menuSize); delay(250); }
     if (check_select_press()) {
-      if (onSelect) {
-        onSelect();
-        if (!isSwitching) rstOverride = true;
-      } else {
-        rstOverride = false;
-        if (onExit) onExit();
-        isSwitching = true;
-        current_proc = currentMenu[cursor].command;
-      }
+      if (onSelect) { onSelect(); if (!isSwitching) rstOverride = true; }
+      else { rstOverride = false; if (onExit) onExit(); isSwitching = true; current_proc = currentMenu[cursor].command; }
     }
   }
   void numberLoop(int maxNum) {
-    if (check_next_press()) {
-      cursor++;
-      cursor = cursor % maxNum;
-      number_drawmenu(maxNum);
-      delay(250);
-    }
-    if (check_select_press()) {
-      rstOverride = false;
-      isSwitching = true;
-      current_proc = 1;
-    }
+    if (check_next_press()) { cursor++; cursor = cursor % maxNum; number_drawmenu(maxNum); delay(250); }
+    if (check_select_press()) { rstOverride = false; isSwitching = true; current_proc = 1; }
   }
 };
 
 MenuController menuController;
 
-/// MAIN MENU ///
 MENU mmenu[] = {
 #if defined(RTC)
   { TXT_CLOCK, 0},
@@ -477,18 +367,16 @@ MENU mmenu[] = {
 #if defined(CARDPUTER)
   { "BadUSB Hunter", 27},
 #endif
-#if defined(CARDPUTER)  // [NEW]
+#if defined(CARDPUTER)
   { "SD", 34},
 #endif
-  { "IR Jammer", 35},   // [NEW]
+  { "IR Jammer", 35},
   { "QR Codes", 18},
   { TXT_SETTINGS, 2},
 };
 int mmenu_size = sizeof(mmenu) / sizeof(MENU);
 
-void mmenu_setup() {
-  menuController.setup(mmenu, mmenu_size);
-}
+void mmenu_setup() { menuController.setup(mmenu, mmenu_size); }
 
 bool screen_dim_dimmed = false;
 int screen_dim_time = 30;
@@ -516,8 +404,7 @@ void screen_dim_proc() {
   if(screen_dim_time > 0){
     if (screen_dim_dimmed == false) {
       if (uptime() == screen_dim_current || (uptime() + 1) == screen_dim_current || (uptime() + 2) == screen_dim_current) {
-        screenBrightness(0);
-        screen_dim_dimmed = true;
+        screenBrightness(0); screen_dim_dimmed = true;
       }
     }
   }
@@ -535,15 +422,10 @@ void dmenu_onSelect() {
   #if defined(USE_EEPROM)
     EEPROM.write(1, screen_dim_time); EEPROM.commit();
   #endif
-  DISP.fillScreen(BGCOLOR); DISP.setCursor(0, 0);
-  DISP.println(String(TXT_SET_BRIGHT)); delay(1000);
-  cursor = brightness / 10;
-  number_drawmenu(11);
+  DISP.fillScreen(BGCOLOR); DISP.setCursor(0, 0); DISP.println(String(TXT_SET_BRIGHT)); delay(1000);
+  cursor = brightness / 10; number_drawmenu(11);
   while( !check_select_press()) {
-    if (check_next_press()) {
-      cursor++; cursor = cursor % 11; number_drawmenu(11);
-      screenBrightness(10 * cursor); delay(250);
-    }
+    if (check_next_press()) { cursor++; cursor = cursor % 11; number_drawmenu(11); screenBrightness(10 * cursor); delay(250); }
   }
   screenBrightness(10 * cursor); brightness = 10 * cursor;
   #if defined(USE_EEPROM)
@@ -553,18 +435,13 @@ void dmenu_onSelect() {
 }
 
 void dmenu_setup() {
-  DISP.fillScreen(BGCOLOR); DISP.setCursor(0, 0);
-  DISP.println(String(TXT_AUTO_DIM)); delay(1000);
+  DISP.fillScreen(BGCOLOR); DISP.setCursor(0, 0); DISP.println(String(TXT_AUTO_DIM)); delay(1000);
   menuController.setup(dmenu, dmenu_size, nullptr, dmenu_onSelect);
 }
 
-/// SETTINGS MENU ///
 MENU smenu[] = {
   { TXT_BACK, 1},
-#if defined(AXP) || defined(PWRMGMT)
-  { TXT_BATT_INFO, 6},
-#endif
-#if defined(CARDPUTER)
+#if defined(AXP) || defined(PWRMGMT) || defined(CARDPUTER)
   { TXT_BATT_INFO, 6},
 #endif
   { TXT_BRIGHT, 4},
@@ -574,10 +451,8 @@ MENU smenu[] = {
 #if defined(ROTATION)
   { TXT_ROTATION, 7},
 #endif
-#if defined(SDCARD)
-  #ifndef CARDPUTER
-    { TXT_SDCARD, 97},
-  #endif
+#if defined(SDCARD) && !defined(CARDPUTER)
+  { TXT_SDCARD, 97},
 #endif
   { "BH RSSI", 29},{ "DH RSSI", 30},{ "BH Alert Pkts", 31},{ "DH Alert Pkts", 32},
   { TXT_PH_ALERT_SSIDS, 33},{ TXT_THEME, 23},{ TXT_ABOUT, 10},{ TXT_REBOOT, 98},
@@ -593,21 +468,16 @@ void smenu_onSelect() {
   else { rstOverride = false; isSwitching = true; current_proc = smenu[cursor].command; }
 }
 
-void smenu_setup() {
-  menuController.setup(smenu, smenu_size, nullptr, smenu_onSelect);
-}
+void smenu_setup() { menuController.setup(smenu, smenu_size, nullptr, smenu_onSelect); }
 
 void clearSettings(){
   #if defined(USE_EEPROM)
   for(int i = 0; i < EEPROM_SIZE; i++) { EEPROM.write(i, 255); Serial.printf("clearing byte %d\n", i); }
   EEPROM.commit();
   #endif
-  screenBrightness(100);
-  DISP.fillScreen(BLUE); DISP.setTextSize(BIG_TEXT); DISP.setRotation(1);
-  DISP.setTextColor(BLUE, WHITE); DISP.setCursor(40, 0);
-  DISP.println("M5-NEMO");
-  DISP.setTextColor(WHITE, BLUE); DISP.setTextSize(SMALL_TEXT);
-  DISP.println(TXT_CLRING_SETTINGS);
+  screenBrightness(100); DISP.fillScreen(BLUE); DISP.setTextSize(BIG_TEXT); DISP.setRotation(1);
+  DISP.setTextColor(BLUE, WHITE); DISP.setCursor(40, 0); DISP.println("M5-NEMO");
+  DISP.setTextColor(WHITE, BLUE); DISP.setTextSize(SMALL_TEXT); DISP.println(TXT_CLRING_SETTINGS);
   delay(5000); ESP.restart();
 }
 
@@ -622,24 +492,15 @@ int cmenu_size = sizeof(cmenu) / sizeof (MENU);
 void setcolor(bool fg, int col){
   uint16_t color = 0x0000;
   switch (col){
-    case 1: color=0x0000; break; 
-    case 2: color=0x000F; break;
-    case 3: color=0x03E0; break;
-    case 4: color=0x03EF; break;
-    case 5: color=0x7800; break;
-    case 6: color=0x780F; break;
-    case 7: color=0x7BE0; break;
-    case 8: color=0xC618; break;
-    case 9: color=0x7BEF; break;
-    case 10: color=0x001F; break;
-    case 11: color=0x07E0; break;
-    case 12: color=0x07FF; break;
-    case 13: color=0xF800; break;
-    case 14: color=0xF81F; break;
-    case 15: color=0xFFE0; break;
-    case 16: color=0xFFFF; break;
-    case 17: color=0xFDA0; break;
-    case 18: color=0xB7E0; break;
+    case 1: color=0x0000; break; case 2: color=0x000F; break;
+    case 3: color=0x03E0; break; case 4: color=0x03EF; break;
+    case 5: color=0x7800; break; case 6: color=0x780F; break;
+    case 7: color=0x7BE0; break; case 8: color=0xC618; break;
+    case 9: color=0x7BEF; break; case 10: color=0x001F; break;
+    case 11: color=0x07E0; break; case 12: color=0x07FF; break;
+    case 13: color=0xF800; break; case 14: color=0xF81F; break;
+    case 15: color=0xFFE0; break; case 16: color=0xFFFF; break;
+    case 17: color=0xFDA0; break; case 18: color=0xB7E0; break;
     case 19: color=0xFC9F; break;
   }
   if(fg){ FGCOLOR=color; } else { BGCOLOR=color; }
@@ -648,33 +509,26 @@ void setcolor(bool fg, int col){
 }
 
 void color_setup() {
-  DISP.fillScreen(BGCOLOR); DISP.setCursor(0, 0);
-  DISP.println(String(TXT_SET_FGCOLOR)); cursor = 0;
+  DISP.fillScreen(BGCOLOR); DISP.setCursor(0, 0); DISP.println(String(TXT_SET_FGCOLOR)); cursor = 0;
   #if defined(USE_EEPROM)
     cursor=EEPROM.read(4);
   #endif
-  rstOverride = true; delay(1000);  
-  drawmenu(cmenu, cmenu_size);
+  rstOverride = true; delay(1000); drawmenu(cmenu, cmenu_size);
 }
 
 void color_loop() {
   if (check_next_press()) {
-    setcolor(EEPROM.read(5), false);
-    cursor++; cursor = cursor % cmenu_size;
+    setcolor(EEPROM.read(5), false); cursor++; cursor = cursor % cmenu_size;
     setcolor(true, cursor); drawmenu(cmenu, cmenu_size); delay(250);
   }
   if (check_select_press()) {
     #if defined(USE_EEPROM)
       EEPROM.write(4, cursor); EEPROM.commit(); cursor=EEPROM.read(5);
     #endif
-    DISP.fillScreen(BGCOLOR); DISP.setCursor(0, 0);
-    DISP.println(String(TXT_SET_BGCOLOR)); delay(1000);
+    DISP.fillScreen(BGCOLOR); DISP.setCursor(0, 0); DISP.println(String(TXT_SET_BGCOLOR)); delay(1000);
     setcolor(false, cursor); drawmenu(cmenu, cmenu_size);
     while( !check_select_press()) {
-      if (check_next_press()) {
-        cursor++; cursor = cursor % cmenu_size ;
-        setcolor(false, cursor); drawmenu(cmenu, cmenu_size); delay(250);
-      }
+      if (check_next_press()) { cursor++; cursor = cursor % cmenu_size; setcolor(false, cursor); drawmenu(cmenu, cmenu_size); delay(250); }
     }
     #if defined(USE_EEPROM)
       EEPROM.write(5, cursor); EEPROM.commit();
@@ -690,23 +544,21 @@ MENU thmenu[] = {
 int thmenu_size = sizeof(thmenu) / sizeof (MENU);
 
 void theme_setup() {
-  DISP.fillScreen(BGCOLOR); DISP.setCursor(0, 0);
-  DISP.println(String(TXT_THEME)); cursor = 0; rstOverride = true; delay(1000);  
-  drawmenu(thmenu, thmenu_size);
+  DISP.fillScreen(BGCOLOR); DISP.setCursor(0, 0); DISP.println(String(TXT_THEME));
+  cursor = 0; rstOverride = true; delay(1000); drawmenu(thmenu, thmenu_size);
 }
 
-int BG=0;
-int FG=0;
+int BG=0; int FG=0;
 
 void theme_loop() {
   if (check_next_press()) {
     cursor++; cursor = cursor % thmenu_size;
     switch (thmenu[cursor].command){
-      case 0: FG=11; BG=1; break;       
+      case 0: FG=11; BG=1; break;
       case 1: FG=11; BG=1; break;
-      case 2: FG=8; BG=1; break;  
+      case 2: FG=8; BG=1; break;
       case 3: FG=16; BG=10; break;
-      case 4: FG=1; BG=8; break;        
+      case 4: FG=1; BG=8; break;
       case 5: FG=19; BG=6; break;
       case 6: FG=16; BG=1; break;
       case 7: FG=5; BG=1; break;
@@ -714,8 +566,7 @@ void theme_loop() {
       case 9: FG=1; BG=19; break;
       case 99: FG=11; BG=1; break;
     }
-    setcolor(true, FG); setcolor(false, BG);
-    drawmenu(thmenu, thmenu_size); delay(250);
+    setcolor(true, FG); setcolor(false, BG); drawmenu(thmenu, thmenu_size); delay(250);
   }
   if (check_select_press()) {
     switch (thmenu[cursor].command){
@@ -750,9 +601,7 @@ int rotation = 1;
 #endif
 
 uint16_t getBatteryColor(int battery) {
-  if(battery < 20) return RED;
-  else if(battery < 60) return ORANGE;
-  else return GREEN;
+  if(battery < 20) return RED; else if(battery < 60) return ORANGE; else return GREEN;
 }
 
 void battery_drawmenu(int battery, float voltage_b = 0, float voltage_c = 0) {
@@ -772,8 +621,8 @@ void battery_drawmenu(int battery, float voltage_b = 0, float voltage_c = 0) {
   DISP.fillRect(barX + barW, barY + barH/4, 3, barH/2, batteryColor);
   DISP.setTextColor(FGCOLOR, BGCOLOR); DISP.setTextSize(textSize);
   DISP.setCursor(textX, textY, 1); DISP.print(battery); DISP.println("%");
-  DISP.setTextSize(TINY_TEXT); DISP.setCursor(10, exitY, 1);
-  DISP.println(TXT_EXIT); DISP.setTextColor(FGCOLOR, BGCOLOR);
+  DISP.setTextSize(TINY_TEXT); DISP.setCursor(10, exitY, 1); DISP.println(TXT_EXIT);
+  DISP.setTextColor(FGCOLOR, BGCOLOR);
 }
 
 #if defined(PWRMGMT)
@@ -802,9 +651,7 @@ void battery_drawmenu(int battery, float voltage_b = 0, float voltage_c = 0) {
     float c = M5.Power.Axp192.getBatteryChargeCurrent() / 1000.0;
     float b = M5.Power.getBatteryVoltage() / 1000.0;
     int battery = M5.Power.getBatteryLevel();
-    if (battery != old_battery || b != old_b || c != old_c){
-      battery_drawmenu(battery, b, c); old_b = b; old_c = c;
-    }
+    if (battery != old_battery || b != old_b || c != old_c){ battery_drawmenu(battery, b, c); old_b = b; old_c = c; }
     if (check_select_press()) { rstOverride = false; isSwitching = true; current_proc = 1; }
     old_battery = battery;
   }
@@ -813,9 +660,7 @@ void battery_drawmenu(int battery, float voltage_b = 0, float voltage_c = 0) {
 #if defined(CARDPUTER)
   uint8_t oldBattery = 0;
   void battery_setup() {
-    rstOverride = false;
-    int battery = M5.Power.getBatteryLevel();
-    battery_drawmenu(battery); delay(500);
+    rstOverride = false; int battery = M5.Power.getBatteryLevel(); battery_drawmenu(battery); delay(500);
   }
   void battery_loop() {
     uint32_t batteryValues = 0;
@@ -861,7 +706,7 @@ void tvbgmenu_onSelect() {
   rstOverride = false; isSwitching = true; current_proc = 5;
 }
 
-void tvbgmenu_setup() {  
+void tvbgmenu_setup() {
   DISP.fillScreen(BGCOLOR); DISP.setTextSize(BIG_TEXT); DISP.setCursor(0, 0);
   DISP.println("TV-B-Gone"); DISP.setTextSize(MEDIUM_TEXT); DISP.println(TXT_REGION); delay(1000);
   int initialCursor = region % 2;
@@ -885,21 +730,14 @@ void sendAllCodes() {
       #if defined(ACTIVE_LOW_IR)
         offtime = powerCode->times[ti]; ontime = powerCode->times[ti + 1];
       #else
-        ontime = powerCode->times[ti]; offtime = powerCode->times[ti + 1];      
+        ontime = powerCode->times[ti]; offtime = powerCode->times[ti + 1];
       #endif
-      DISP.setTextSize(TINY_TEXT);
-      DISP.printf("rti = %d Pair = %d, %d\n", ti >> 1, ontime, offtime);
+      DISP.setTextSize(TINY_TEXT); DISP.printf("rti = %d Pair = %d, %d\n", ti >> 1, ontime, offtime);
       rawData[k * 2] = offtime * 10; rawData[(k * 2) + 1] = ontime * 10;
     }
     IrSender.sendRaw(rawData, (numpairs * 2), freq);
     digitalWrite(IRLED, M5LED_OFF); bitsleft_r = 0; delay_ten_us(20500);
-    #if defined(AXP)
-    M5.update();
-    if (M5.Power.getKeyState()) {
-      endingEarly = true; current_proc = 1; isSwitching = true; rstOverride = false; break;
-    }
-    #endif
-    #if defined(STICKS3)
+    #if defined(AXP) || defined(STICKS3)
     M5.update();
     if (M5.Power.getKeyState()) {
       endingEarly = true; current_proc = 1; isSwitching = true; rstOverride = false; break;
@@ -940,13 +778,10 @@ void sendAllCodes() {
   #endif
     number_drawmenu(24);
     while(digitalRead(M5_BUTTON_HOME) == HIGH) {
-      if (check_next_press()) {
-        cursor++; cursor = cursor % 24 ; number_drawmenu(24); delay(100);
-      }
+      if (check_next_press()) { cursor++; cursor = cursor % 24; number_drawmenu(24); delay(100); }
     }
     int hour = cursor;
-    DISP.fillScreen(BGCOLOR); DISP.setCursor(0, 0);
-    DISP.println(TXT_SET_MIN); delay(2000);
+    DISP.fillScreen(BGCOLOR); DISP.setCursor(0, 0); DISP.println(TXT_SET_MIN); delay(2000);
     #if defined(STICK_C_PLUS2) || defined(STICK_C) || defined(STICK_C_PLUS)
       cursor = dt.time.minutes;
     #else
@@ -954,9 +789,7 @@ void sendAllCodes() {
     #endif
     number_drawmenu(60);
     while(digitalRead(M5_BUTTON_HOME) == HIGH) {
-      if (check_next_press()) {
-        cursor++; cursor = cursor % 60 ; number_drawmenu(60); delay(100);
-      }
+      if (check_next_press()) { cursor++; cursor = cursor % 60; number_drawmenu(60); delay(100); }
     }
     int minute = cursor;
     DISP.fillScreen(BGCOLOR); DISP.setCursor(0, 0);
@@ -967,8 +800,8 @@ void sendAllCodes() {
       TimeStruct.Hours = hour; TimeStruct.Minutes = minute; TimeStruct.Seconds = 0;
       M5.Rtc.SetTime(&TimeStruct);
     #endif
-    DISP.printf("Setting Time:\n%02d:%02d:00",hour,minute);
-    delay(2000); rstOverride = false; isSwitching = true; current_proc = 0;
+    DISP.printf("Setting Time:\n%02d:%02d:00",hour,minute); delay(2000);
+    rstOverride = false; isSwitching = true; current_proc = 0;
   }
 #endif
 
@@ -984,10 +817,7 @@ void btmenu_setup() {
 }
 
 void btmenu_loop() {
-  if (check_next_press()) {
-    cursor++; cursor = cursor % btmenu_size;
-    drawmenu(btmenu, btmenu_size); delay(250);
-  }
+  if (check_next_press()) { cursor++; cursor = cursor % btmenu_size; drawmenu(btmenu, btmenu_size); delay(250); }
   if (check_select_press()) {
     int option = btmenu[cursor].command;
     DISP.fillScreen(BGCOLOR); DISP.setTextSize(MEDIUM_TEXT); DISP.setCursor(0, 0);
@@ -1019,16 +849,14 @@ int ajmenu_size = sizeof(ajmenu) / sizeof (MENU);
 void aj_setup(){
   DISP.fillScreen(BGCOLOR); DISP.setTextSize(MEDIUM_TEXT); DISP.setCursor(0, 0);
   DISP.setTextColor(BGCOLOR, FGCOLOR); DISP.println(" AppleJuice  ");
-  DISP.setTextColor(FGCOLOR, BGCOLOR); delay(1000);  
+  DISP.setTextColor(FGCOLOR, BGCOLOR); delay(1000);
   cursor = 0; sourApple = false; swiftPair = false; maelstrom = false;
   rstOverride = true; drawmenu(ajmenu, ajmenu_size);
 }
 
 void aj_loop(){
   if (!maelstrom){
-    if (check_next_press()) {
-      cursor++; cursor = cursor % ajmenu_size; drawmenu(ajmenu, ajmenu_size); delay(100);
-    }
+    if (check_next_press()) { cursor++; cursor = cursor % ajmenu_size; drawmenu(ajmenu, ajmenu_size); delay(100); }
   }
   if (check_select_press() || maelstrom) {
     deviceType = ajmenu[cursor].command;
@@ -1150,7 +978,7 @@ void credits_setup(){
 
 void credits_loop(){
   if(millis() > advtime){
-    DISP.setTextColor(BLACK, WHITE);  
+    DISP.setTextColor(BLACK, WHITE);
     DISP.setCursor(0, 115); DISP.println("                   ");
     DISP.setCursor(0, 115); DISP.println(contributors[cursor]);
     cursor++; cursor = cursor % (sizeof(contributors)/sizeof(contributors[0]));
@@ -1171,14 +999,9 @@ void wifispam_setup() {
   DISP.print(TXT_WF_SP);
   int ct = 0; const char *str;
   switch(spamtype) {
-    case 1:
-      for(str = funnyssids; *str; ++str) ct += *str == '\n';
-      DISP.printf(" - %d SSIDs:\n", ct); DISP.print(funnyssids); break;
-    case 2:
-      for(str = rickrollssids; *str; ++str) ct += *str == '\n';
-      DISP.printf(" - %d SSIDs:\n", ct); DISP.print(rickrollssids); break;
-    case 3:
-      DISP.printf(TXT_RND_SSID, ct); break;
+    case 1: for(str = funnyssids; *str; ++str) ct += *str == '\n'; DISP.printf(" - %d SSIDs:\n", ct); DISP.print(funnyssids); break;
+    case 2: for(str = rickrollssids; *str; ++str) ct += *str == '\n'; DISP.printf(" - %d SSIDs:\n", ct); DISP.print(rickrollssids); break;
+    case 3: DISP.printf(TXT_RND_SSID, ct); break;
   }
   DISP.setTextSize(SMALL_TEXT); current_proc = 11;
 }
@@ -1189,19 +1012,15 @@ void wifispam_loop() {
   digitalWrite(M5LED, M5LED_ON); delay(1); digitalWrite(M5LED, M5LED_OFF);
 #endif
   switch(spamtype) {
-    case 1:
-      len = sizeof(funnyssids); while(i < len){ i++; } beaconSpamList(funnyssids); break;
-    case 2:
-      len = sizeof(rickrollssids); while(i < len){ i++; } beaconSpamList(rickrollssids); break;
-    case 3:
-      char* randoms = randomSSID(); len = sizeof(randoms);
-      while(i < len){ i++; } beaconSpamList(randoms); break;
+    case 1: len = sizeof(funnyssids); while(i < len){ i++; } beaconSpamList(funnyssids); break;
+    case 2: len = sizeof(rickrollssids); while(i < len){ i++; } beaconSpamList(rickrollssids); break;
+    case 3: { char* randoms = randomSSID(); len = sizeof(randoms); while(i < len){ i++; } beaconSpamList(randoms); } break;
   }
 }
 
 void btmaelstrom_setup(){ rstOverride = false; maelstrom = true; }
 
-void btmaelstrom_loop(){  
+void btmaelstrom_loop(){
   swiftPair = false; sourApple = true; aj_adv();
   if (maelstrom){ swiftPair = true; androidPair = false; sourApple = false; aj_adv(); }
   if (maelstrom){ swiftPair = false; androidPair = true; sourApple = false; aj_adv(); }
@@ -1217,9 +1036,7 @@ int wsmenu_size = sizeof(wsmenu) / sizeof (MENU);
 void wsmenu_setup() { cursor = 0; rstOverride = true; drawmenu(wsmenu, wsmenu_size); delay(500); }
 
 void wsmenu_loop() {
-  if (check_next_press()) {
-    cursor++; cursor = cursor % wsmenu_size; drawmenu(wsmenu, wsmenu_size); delay(250);
-  }
+  if (check_next_press()) { cursor++; cursor = cursor % wsmenu_size; drawmenu(wsmenu, wsmenu_size); delay(250); }
   if (check_select_press()) {
     int option = wsmenu[cursor].command;
     rstOverride = false; current_proc = 11; isSwitching = true;
@@ -1371,8 +1188,7 @@ void portal_loop(){
   if ((millis() - lastTick) > PortalTickTimer) {
     lastTick = millis();
     if (totalCapturedCredentials != previousTotalCapturedCredentials) {
-      previousTotalCapturedCredentials = totalCapturedCredentials;
-      printHomeToScreen();
+      previousTotalCapturedCredentials = totalCapturedCredentials; printHomeToScreen();
     }
   }
   dnsServer.processNextRequest(); webServer.handleClient();
@@ -1456,9 +1272,7 @@ void menu_controller_loop() { menuController.loop(); }
   void sdmenu_draw() {
     DISP.setTextSize(SMALL_TEXT); DISP.fillScreen(BGCOLOR);
     DISP.setCursor(0, 0); DISP.setTextColor(FGCOLOR, BGCOLOR);
-    if (sdFileCount == 0) {
-      DISP.println("SD empty / not mounted"); DISP.println("Sel: Back"); return;
-    }
+    if (sdFileCount == 0) { DISP.println("SD empty / not mounted"); DISP.println("Sel: Back"); return; }
     int start = 0;
     if (cursor > 5) start = cursor - 5;
     for (int i = start; i < sdFileCount; i++) {
@@ -1496,9 +1310,7 @@ void menu_controller_loop() { menuController.loop(); }
 
   void sdmenu_loop() {
     if (check_next_press()) {
-      if (sdFileCount > 0) {
-        cursor++; cursor = cursor % sdFileCount; sdmenu_draw();
-      }
+      if (sdFileCount > 0) { cursor++; cursor = cursor % sdFileCount; sdmenu_draw(); }
       delay(250);
     }
     if (check_select_press()) {
@@ -1508,22 +1320,160 @@ void menu_controller_loop() { menuController.loop(); }
 #endif
 
 // ============================================================
-// [NEW] IR JAMMER
+// [NEW v2] IR JAMMER — 5 режимов, портировано из Bruce
+// ENTER/ /  — сменить режим.  TAB/.  — выход.
 // ============================================================
+#define IRJAM_NUM_FREQS 7
+static const uint16_t IRJAM_FREQS[IRJAM_NUM_FREQS] = {30000, 33000, 36000, 38000, 40000, 42000, 56000};
+static const char* IRJAM_MODE_NAMES[5] = {"BASIC", "ENH.BASIC", "SWEEP", "RANDOM", "EMPTY"};
+
+struct IRJammerState {
+    uint8_t  mode;              // 0=BASIC 1=ENH 2=SWEEP 3=RANDOM 4=EMPTY
+    uint8_t  jamDensity;        // 1..20
+    uint16_t markTiming;
+    uint16_t spaceTiming;
+    uint16_t minTiming;
+    uint16_t maxTiming;
+    uint8_t  sweepSpeed;
+    int8_t   sweepDirection;
+    uint8_t  freqIdx;           // 0..6
+    uint32_t lastUpdate;
+    uint32_t jamCount;
+    bool     redraw;
+};
+
+static IRJammerState irjam = {};
+static uint16_t irjam_freq() { return IRJAM_FREQS[irjam.freqIdx]; }
+
+static void irjam_sendPat(const uint16_t* pat, uint16_t len) {
+    IrSender.sendRaw((uint16_t*)pat, len, irjam_freq());
+}
+
+// BASIC: фиксированный тайминг, длинная пачка
+static void irjam_doBasic() {
+    uint16_t pat[40];
+    for (int i = 0; i < 40; i += 2) {
+        pat[i]   = irjam.markTiming;
+        pat[i+1] = irjam.markTiming;
+    }
+    for (int r = 0; r < irjam.jamDensity; r++) irjam_sendPat(pat, 40);
+}
+
+// ENHANCED: раздельные mark / space
+static void irjam_doEnhanced() {
+    uint16_t pat[40];
+    for (int i = 0; i < 40; i += 2) {
+        pat[i]   = irjam.markTiming;
+        pat[i+1] = irjam.spaceTiming;
+    }
+    for (int r = 0; r < irjam.jamDensity; r++) irjam_sendPat(pat, 40);
+}
+
+// SWEEP: плавно меняем 8..70 us — перекрывает NEC/RC5/Sony/Samsung/LG
+static void irjam_doSweep() {
+    irjam.markTiming += irjam.sweepDirection * irjam.sweepSpeed;
+    if (irjam.markTiming > irjam.maxTiming || irjam.markTiming < irjam.minTiming) {
+        irjam.sweepDirection *= -1;
+        irjam.markTiming = constrain(irjam.markTiming, irjam.minTiming, irjam.maxTiming);
+    }
+    irjam.spaceTiming = irjam.markTiming;
+    uint16_t pat[60];
+    for (int i = 0; i < 60; i += 2) {
+        pat[i]   = irjam.markTiming;
+        pat[i+1] = irjam.markTiming;
+    }
+    irjam_sendPat(pat, 60);
+}
+
+// RANDOM: случайные импульсы + случайная частота
+static void irjam_doRandom() {
+    uint16_t pat[60];
+    for (int i = 0; i < 60; i++) pat[i] = random(5, 1000);
+    if (random(10) < 3) irjam.freqIdx = random(IRJAM_NUM_FREQS);
+    irjam_sendPat(pat, 60);
+}
+
+// EMPTY: короткие «пустые» пакеты + прыжки по частоте
+static void irjam_doEmpty() {
+    uint16_t pat[4] = {1, 1, 1, 1};
+    for (int i = 0; i < irjam.jamDensity; i++) irjam_sendPat(pat, 4);
+    if (random(5) < 2) irjam.freqIdx = (irjam.freqIdx + 1) % IRJAM_NUM_FREQS;
+}
+
+void irjam_draw() {
+    DISP.fillScreen(BGCOLOR); DISP.setTextSize(SMALL_TEXT);
+    DISP.setCursor(0, 0); DISP.setTextColor(BGCOLOR, FGCOLOR);
+    DISP.println(" IR Jammer ");
+    DISP.setTextColor(FGCOLOR, BGCOLOR);
+    DISP.printf("Mode: %s\n", IRJAM_MODE_NAMES[irjam.mode]);
+    DISP.printf("Freq: %u kHz\n", irjam_freq() / 1000);
+    DISP.printf("Jams: %lu\n", (unsigned long)irjam.jamCount);
+    DISP.printf("Tmg : %u us\n", irjam.markTiming);
+    DISP.println("ENT:Mode  TAB:Exit");
+}
+
 void irjam_setup() {
-  DISP.fillScreen(BGCOLOR); DISP.setTextSize(BIG_TEXT); DISP.setCursor(0, 0);
-  DISP.println("IR Jammer"); DISP.setTextSize(SMALL_TEXT);
-  DISP.println("Jamming..."); DISP.println("Next: Stop");
-  IrSender.begin(IRLED); digitalWrite(IRLED, M5LED_OFF);
-  rstOverride = true; delay(500);
+    irjam.mode           = 2;   // SWEEP по умолчанию
+    irjam.jamDensity     = 5;
+    irjam.markTiming     = 12;
+    irjam.spaceTiming    = 12;
+    irjam.minTiming      = 8;
+    irjam.maxTiming      = 70;
+    irjam.sweepSpeed     = 2;
+    irjam.sweepDirection = 1;
+    irjam.freqIdx        = 3;   // 38 kHz
+    irjam.lastUpdate     = 0;
+    irjam.jamCount       = 0;
+    irjam.redraw         = true;
+
+    IrSender.begin(IRLED);
+    digitalWrite(IRLED, M5LED_OFF);
+
+    rstOverride = true;
+    irjam_draw();
+    delay(500);
 }
 
 void irjam_loop() {
-  if (check_next_press()) {
-    digitalWrite(IRLED, M5LED_OFF);
-    rstOverride = false; isSwitching = true; current_proc = 1; delay(250); return;
-  }
-  IrSender.sendNEC(0, 0, 0);
+    // Выход по next
+    if (check_next_press()) {
+        digitalWrite(IRLED, M5LED_OFF);
+        rstOverride = false;
+        isSwitching = true;
+        current_proc = 1;
+        delay(250);
+        return;
+    }
+    // Переключение режима по select
+    if (check_select_press()) {
+        irjam.mode = (irjam.mode + 1) % 5;
+        irjam.jamCount = 0;
+        irjam.redraw = true;
+        delay(300);
+    }
+
+    uint32_t now = millis();
+
+    // Обновление экрана раз в секунду или по запросу
+    static uint32_t lastDisp = 0;
+    if (irjam.redraw || now - lastDisp > 1000) {
+        irjam.redraw = false;
+        lastDisp = now;
+        irjam_draw();
+    }
+
+    // Отправка пачки каждые 15 мс
+    if (now - irjam.lastUpdate > 15) {
+        irjam.lastUpdate = now;
+        switch (irjam.mode) {
+            case 0: irjam_doBasic();    break;
+            case 1: irjam_doEnhanced(); break;
+            case 2: irjam_doSweep();    break;
+            case 3: irjam_doRandom();   break;
+            case 4: irjam_doEmpty();    break;
+        }
+        irjam.jamCount++;
+    }
 }
 
 struct ProcessHandler {
@@ -1571,7 +1521,7 @@ ProcessHandler processes[] = {
   {27, badusb_hunter_setup, badusb_hunter_loop, "BadUSB Hunter"},
 #endif
   {29, bh_rssi_setup, bh_rssi_loop, "BH RSSI Setting"},
-  {30, dh_rssi_setup, dh_rssi_loop, "DH RSSI Setting"}, 
+  {30, dh_rssi_setup, dh_rssi_loop, "DH RSSI Setting"},
   {31, bh_alert_pkts_setup, bh_alert_pkts_loop, "BH Alert Pkts Setting"},
   {32, dh_alert_pkts_setup, dh_alert_pkts_loop, "DH Alert Pkts Setting"},
   {33, ph_alert_ssids_setup, ph_alert_ssids_loop, TXT_PH_ALERT_SSIDS},
@@ -1628,14 +1578,12 @@ std::vector<String> seen_ap_macs;
 bool channel_hop_pause = false;
 
 uint16_t getRSSIColor(float rssi, float max) {
-  if(rssi < max * .5 ) return BLUE;
-  else if(rssi < max * .8 ) return YELLOW;
-  else return RED;
+  if(rssi < max * .5 ) return BLUE; else if(rssi < max * .8 ) return YELLOW; else return RED;
 }
 
 void extract_mac(char *addr, uint8_t* data, uint16_t offset) {
-  sprintf(addr, "%02x:%02x:%02x:%02x:%02x:%02x", 
-          data[offset+0], data[offset+1], data[offset+2], 
+  sprintf(addr, "%02x:%02x:%02x:%02x:%02x:%02x",
+          data[offset+0], data[offset+1], data[offset+2],
           data[offset+3], data[offset+4], data[offset+5]);
 }
 
@@ -1650,11 +1598,11 @@ void draw_rssi_bar(float rssi, float rssimax = -20) {
   DISP.print(" "); DISP.print(rssi); DISP.println("dBm");
   DISP.println("Sel: Pause/Scan\nNext: Exit");
   float rssipct = 100 + rssi; float maxpct = 100 + rssimax;
-  if (rssipct > maxpct) rssipct = maxpct; 
+  if (rssipct > maxpct) rssipct = maxpct;
   uint16_t rssiColor=getRSSIColor(rssipct, maxpct);
   int barX = 10, barY = 120, barW = 220, barH = 10;
   DISP.drawRect(barX, barY, barW, barH, rssiColor);
-  int fillW = (barW - 4) * (rssipct / maxpct); 
+  int fillW = (barW - 4) * (rssipct / maxpct);
   DISP.fillRect(barX + 2, barY + 2, fillW, barH - 4, rssiColor);
   int remainingW = (barW - 4) - fillW;
   if (remainingW > 0) DISP.fillRect(barX + 2 + fillW, barY + 2, remainingW, barH - 4, TFT_BLACK);
@@ -1731,15 +1679,11 @@ void deauth_hunter_setup() {
 }
 
 void deauth_hunter_loop() {
-  if (check_next_press()) {
-    stop_deauth_monitoring(); isSwitching = true; current_proc = 12; return;
-  }
+  if (check_next_press()) { stop_deauth_monitoring(); isSwitching = true; current_proc = 12; return; }
   if (check_select_press()) { channel_hop_pause = !channel_hop_pause; delay(500); }
   if (!channel_hop_pause) hop_channel();
   reset_stats_if_needed();
-  uint32_t now = millis();
-  DISP.setCursor(0, 0); DISP.setTextSize(SMALL_TEXT);
-  DISP.setTextSize(MEDIUM_TEXT); DISP.setTextColor(BGCOLOR, FGCOLOR);
+  DISP.setCursor(0, 0); DISP.setTextSize(MEDIUM_TEXT); DISP.setTextColor(BGCOLOR, FGCOLOR);
   DISP.setCursor(0, 0); DISP.println("Deauth Hunter");
   DISP.setTextSize(SMALL_TEXT); DISP.setTextColor(FGCOLOR, BGCOLOR);
   DISP.printf("Ch: "); DISP.printf("%-2d", WIFI_CHANNELS[current_channel_idx]);
@@ -1762,8 +1706,7 @@ std::vector<BLEDeviceInfo> seen_ble_devices;
 
 void BLEHunterCallback::onResult(BLEAdvertisedDevice advertisedDevice) {
   if (!ble_hunter_active) return;
-  static uint32_t last_process = 0;
-  uint32_t now = millis();
+  static uint32_t last_process = 0; uint32_t now = millis();
   if (now - last_process < 50) return;
   last_process = now;
   String mac = advertisedDevice.getAddress().toString().c_str();
@@ -1789,9 +1732,9 @@ void add_unique_ble_device(const String& mac, const String& name, int32_t rssi) 
 }
 
 String detect_device_type(const String& mac, const String& name) {
-  if (name.indexOf("AirPods") != -1 || name.indexOf("iPhone") != -1 || 
+  if (name.indexOf("AirPods") != -1 || name.indexOf("iPhone") != -1 ||
       name.indexOf("iPad") != -1 || name.indexOf("Apple") != -1) return "Apple";
-  if (name.indexOf("Android") != -1 || name.indexOf("Galaxy") != -1 || 
+  if (name.indexOf("Android") != -1 || name.indexOf("Galaxy") != -1 ||
       name.indexOf("Pixel") != -1) return "Android";
   String macPrefix = mac.substring(0, 8); macPrefix.toUpperCase();
   if (macPrefix.startsWith("FC:58:FA") || macPrefix.startsWith("3C:7C:3F")) return "Apple";
@@ -1833,7 +1776,7 @@ void ble_hunter_setup() {
   ble_stats = BLEStats(); seen_ble_devices.clear(); ble_channel_hop_pause = false;
   ble_stats.last_reset_time = millis();
   DISP.setCursor(0, 0); DISP.setTextSize(MEDIUM_TEXT);
-  DISP.setTextColor(BGCOLOR, FGCOLOR); DISP.setCursor(0, 0); DISP.println(" BLE Hunter  ");
+  DISP.setTextColor(BGCOLOR, FGCOLOR); DISP.println(" BLE Hunter  ");
   DISP.setTextSize(SMALL_TEXT); DISP.setTextColor(FGCOLOR, BGCOLOR);
   DISP.println("Initializing..."); start_ble_monitoring();
 }
@@ -1841,15 +1784,12 @@ void ble_hunter_setup() {
 void ble_hunter_loop() {
   if (check_next_press()) { stop_ble_monitoring(); isSwitching = true; current_proc = 16; return; }
   if (check_select_press()) { ble_channel_hop_pause = !ble_channel_hop_pause; delay(500); }
-  static uint32_t last_scan = 0;
-  uint32_t now = millis();
-  if (ble_scanner && (now - last_scan > 1000)) {
-    ble_scanner->start(BLE_SCAN_TIME, false); last_scan = now;
-  }
+  static uint32_t last_scan = 0; uint32_t now = millis();
+  if (ble_scanner && (now - last_scan > 1000)) { ble_scanner->start(BLE_SCAN_TIME, false); last_scan = now; }
   reset_ble_stats_if_needed();
   delay(100);
-  DISP.setCursor(0, 0); DISP.setTextSize(MEDIUM_TEXT);
-  DISP.setTextColor(BGCOLOR, FGCOLOR); DISP.setCursor(0, 0); DISP.println(" BLE Hunter  ");
+  DISP.setCursor(0, 0); DISP.setTextSize(MEDIUM_TEXT); DISP.setTextColor(BGCOLOR, FGCOLOR);
+  DISP.println(" BLE Hunter  ");
   DISP.setTextSize(SMALL_TEXT); DISP.setTextColor(FGCOLOR, BGCOLOR);
   DISP.printf("Devices: %-6d\n", ble_stats.unique_devices);
   DISP.printf("Pkts: %-5d / %3d\n", ble_stats.total_devices, bh_pkts);
@@ -1899,8 +1839,7 @@ void handle_main_list_input() {
   if (check_next_press()) {
     int total_items = pineap_hunter_stats.detected_pineaps.size() + 1;
     cursor++;
-    if (cursor < 0) cursor = total_items - 1;
-    else cursor %= total_items;
+    if (cursor < 0) cursor = total_items - 1; else cursor %= total_items;
     update_display(); delay(250);
   }
   if (check_select_press()) {
@@ -1926,8 +1865,7 @@ void handle_ssid_list_input() {
       const auto& pine = pineap_hunter_stats.detected_pineaps[pineap_hunter_stats.selected_bssid_index];
       int total_items = pine.essids.size() + 1;
       cursor++;
-      if (cursor < 0) cursor = total_items - 1;
-      else cursor %= total_items;
+      if (cursor < 0) cursor = total_items - 1; else cursor %= total_items;
     }
     update_display(); delay(250);
   }
@@ -1964,8 +1902,7 @@ void add_scan_result(const String& bssid_str, const String& essid, int32_t rssi)
   bool found = false;
   for (auto& existing_record : essid_list) {
     if (existing_record.essid == essid) {
-      existing_record.rssi = rssi; existing_record.last_seen = millis();
-      found = true; break;
+      existing_record.rssi = rssi; existing_record.last_seen = millis(); found = true; break;
     }
   }
   if (!found) essid_list.push_back(SSIDRecord(essid, rssi));
@@ -1979,8 +1916,7 @@ void process_scan_results() {
     if (ssid_records.size() >= ph_alert_ssids) {
       PineRecord pine;
       string_to_bssid(bssid_str, pine.bssid);
-      pine.essids = ssid_records;
-      pine.last_seen = millis();
+      pine.essids = ssid_records; pine.last_seen = millis();
       std::sort(pine.essids.begin(), pine.essids.end(),
         [](const SSIDRecord& a, const SSIDRecord& b) { return a.last_seen > b.last_seen; });
       new_pineaps.push_back(pine);
@@ -2009,10 +1945,7 @@ void maintain_buffer_size() {
   }
 }
 
-bool is_pineapple_detected(const std::vector<String>& essids) {
-  return essids.size() >= ph_alert_ssids;
-}
-
+bool is_pineapple_detected(const std::vector<String>& essids) { return essids.size() >= ph_alert_ssids; }
 void update_pineapple_list() { process_scan_results(); }
 
 void update_display() {
@@ -2026,9 +1959,8 @@ void update_display() {
 void draw_main_list() {
   DISP.fillScreen(BGCOLOR);
   int total_pineaps = pineap_hunter_stats.detected_pineaps.size();
-  DISP.setCursor(0, 0); DISP.setTextSize(MEDIUM_TEXT);
-  DISP.setTextColor(BGCOLOR, FGCOLOR); DISP.println(TXT_PINEAP_HUNTER);
-  DISP.setTextColor(FGCOLOR, BGCOLOR); DISP.setTextSize(SMALL_TEXT);
+  DISP.setCursor(0, 0); DISP.setTextSize(MEDIUM_TEXT); DISP.setTextColor(BGCOLOR, FGCOLOR);
+  DISP.println(TXT_PINEAP_HUNTER); DISP.setTextColor(FGCOLOR, BGCOLOR); DISP.setTextSize(SMALL_TEXT);
   if (total_pineaps == 0) DISP.println("No PineAPs detected");
   else {
     if (cursor > 4) {
@@ -2063,8 +1995,7 @@ void draw_ssid_list() {
   DISP.fillScreen(BGCOLOR); DISP.setTextSize(SMALL_TEXT); DISP.setCursor(0, 0);
   int total_ssids = pine.essids.size();
   String bssid_str = bssid_to_string(pine.bssid);
-  DISP.setTextColor(BGCOLOR, FGCOLOR); DISP.println(bssid_str);
-  DISP.setTextColor(FGCOLOR, BGCOLOR);
+  DISP.setTextColor(BGCOLOR, FGCOLOR); DISP.println(bssid_str); DISP.setTextColor(FGCOLOR, BGCOLOR);
   if (cursor > 4) {
     for (int i = cursor - 4; i < total_ssids && i < cursor + 5; i++) {
       if (cursor == i) DISP.setTextColor(BGCOLOR, FGCOLOR);
@@ -2159,9 +2090,7 @@ void dh_rssi_setup() {
 void dh_rssi_loop() {
   DISP.setCursor(0, 0); DISP.println("DH RSSI Threshold");
   DISP.printf("Current: %d dBm\n", dh_rssi_threshold); DISP.println("Range: -10 to -100");
-  if (check_next_press()) {
-    cursor++; cursor = cursor % 19; dh_rssi_threshold = -100 + (cursor * 5); delay(250);
-  }
+  if (check_next_press()) { cursor++; cursor = cursor % 19; dh_rssi_threshold = -100 + (cursor * 5); delay(250); }
   if (check_select_press()) {
     #if defined(USE_EEPROM)
       EEPROM.write(8, abs(dh_rssi_threshold)); EEPROM.commit();
